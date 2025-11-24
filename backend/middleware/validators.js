@@ -241,7 +241,12 @@ const createPlanValidation = [
 ];
 
 const checkoutValidation = [
-  body("planId").isInt().withMessage("Plan ID inválido"),
+  body("planCode")
+    .trim()
+    .notEmpty()
+    .withMessage("planCode es obligatorio")
+    .isString()
+    .withMessage("planCode debe ser un string"),
   validate,
 ];
 

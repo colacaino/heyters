@@ -11,7 +11,7 @@ const path = require("path");
 const { Server } = require("socket.io");
 const { createAdapter } = require("@socket.io/redis-adapter");
 const { logger, morganFormat } = require("./utils/logger");
-const { redisPub, redisSub, redisClient } = require("./services/redisService");
+const { getRedisPub, getRedisSub, isRedisAvailable } = require("./services/redisService");
 const db = require("./db");
 
 // Middleware de seguridad
@@ -136,12 +136,21 @@ app.get("/health", async (req, res) => {
   }
 
   try {
-    // Check Redis
-    await redisClient.ping();
-    healthcheck.services.redis = "healthy";
+    // Check Redis (opcional)
+    if (isRedisAvailable()) {
+      const redisClient = require("./services/redisService").getRedisClient();
+      if (redisClient) {
+        await redisClient.ping();
+        healthcheck.services.redis = "healthy";
+      } else {
+        healthcheck.services.redis = "not_configured";
+      }
+    } else {
+      healthcheck.services.redis = "not_configured";
+    }
   } catch (err) {
     healthcheck.services.redis = "unhealthy";
-    healthcheck.status = "degraded";
+    // Redis es opcional, no degradar el status
   }
 
   const httpStatus = healthcheck.status === "ok" ? 200 : 503;
@@ -189,10 +198,17 @@ const io = new Server(server, {
   transports: ["websocket", "polling"],
 });
 
-// Redis adapter para escalar Socket.IO horizontalmente
-// Permite múltiples servidores compartiendo eventos
-io.adapter(createAdapter(redisPub, redisSub));
-logger.info("✅ Socket.IO configurado con Redis adapter");
+// Redis adapter para escalar Socket.IO horizontalmente (solo si Redis está disponible)
+if (isRedisAvailable()) {
+  const redisPub = getRedisPub();
+  const redisSub = getRedisSub();
+  if (redisPub && redisSub) {
+    io.adapter(createAdapter(redisPub, redisSub));
+    logger.info("✅ Socket.IO configurado con Redis adapter");
+  }
+} else {
+  logger.warn("⚠️ Socket.IO funcionando sin Redis adapter (modo single-server)");
+}
 
 // Registrar la instancia de Socket.IO en servicios
 registerSocket(io);

@@ -1,59 +1,112 @@
 // services/redisService.js
-const Redis = require("ioredis");
 const { logger } = require("../utils/logger");
 
 /**
- * Configuración de Redis
+ * Verificar si Redis está configurado correctamente
+ * Debe tener REDIS_HOST con un valor real (no localhost, no vacío)
  */
-const redisConfig = {
-  host: process.env.REDIS_HOST || "localhost",
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-  db: process.env.REDIS_DB || 0,
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  lazyConnect: false,
-};
+const REDIS_HOST = process.env.REDIS_HOST;
+const isRedisConfigured = !!(
+  REDIS_HOST &&
+  REDIS_HOST.trim() !== "" &&
+  REDIS_HOST !== "localhost" &&
+  REDIS_HOST !== "127.0.0.1" &&
+  REDIS_HOST.includes(".")  // Debe ser un dominio real como xxx.upstash.io
+);
+
+// Log inmediato para debug
+console.log(`[Redis Config] REDIS_HOST="${REDIS_HOST}", isRedisConfigured=${isRedisConfigured}`);
+
+let Redis = null;
+let redisClient = null;
+let redisPub = null;
+let redisSub = null;
+let redisAvailable = false;
 
 /**
- * Cliente principal de Redis
+ * Inicializar Redis (solo si está configurado)
  */
-const redisClient = new Redis(redisConfig);
+async function initRedis() {
+  if (!isRedisConfigured) {
+    logger.warn("⚠️ Redis no configurado - funcionando sin cache (esto es normal si no tienes Upstash)");
+    return false;
+  }
 
-/**
- * Cliente para Pub/Sub (Socket.IO)
- */
-const redisPub = new Redis(redisConfig);
-const redisSub = new Redis(redisConfig);
+  try {
+    // Solo importar ioredis si realmente vamos a usarlo
+    Redis = require("ioredis");
 
-// Eventos de conexión
-redisClient.on("connect", () => {
-  logger.info("✅ Redis client conectado");
-});
+    const redisConfig = {
+      host: process.env.REDIS_HOST,
+      port: parseInt(process.env.REDIS_PORT) || 6379,
+      password: process.env.REDIS_PASSWORD || undefined,
+      db: parseInt(process.env.REDIS_DB) || 0,
+      retryStrategy: (times) => {
+        if (times > 3) return null; // Dejar de reintentar después de 3 intentos
+        return Math.min(times * 100, 2000);
+      },
+      maxRetriesPerRequest: 3,
+      enableReadyCheck: true,
+      lazyConnect: true,
+      connectTimeout: 5000,
+    };
 
-redisClient.on("ready", () => {
-  logger.info("🟢 Redis client listo");
-});
+    redisClient = new Redis(redisConfig);
+    redisPub = new Redis(redisConfig);
+    redisSub = new Redis(redisConfig);
 
-redisClient.on("error", (err) => {
-  logger.error(`❌ Redis error: ${err.message}`, { error: err.stack });
-});
+    // Eventos de conexión
+    redisClient.on("connect", () => {
+      logger.info("✅ Redis client conectado");
+    });
 
-redisClient.on("close", () => {
-  logger.warn("⚠️ Redis conexión cerrada");
-});
+    redisClient.on("ready", () => {
+      logger.info("🟢 Redis client listo");
+      redisAvailable = true;
+    });
 
-redisPub.on("error", (err) => {
-  logger.error(`❌ Redis Pub error: ${err.message}`);
-});
+    redisClient.on("error", (err) => {
+      logger.error(`❌ Redis error: ${err.message}`);
+      redisAvailable = false;
+    });
 
-redisSub.on("error", (err) => {
-  logger.error(`❌ Redis Sub error: ${err.message}`);
-});
+    redisClient.on("close", () => {
+      logger.warn("⚠️ Redis conexión cerrada");
+      redisAvailable = false;
+    });
+
+    redisPub.on("error", (err) => {
+      logger.error(`❌ Redis Pub error: ${err.message}`);
+    });
+
+    redisSub.on("error", (err) => {
+      logger.error(`❌ Redis Sub error: ${err.message}`);
+    });
+
+    // Intentar conectar
+    await redisClient.connect();
+    await redisPub.connect();
+    await redisSub.connect();
+
+    redisAvailable = true;
+    logger.info("✅ Redis inicializado correctamente");
+    return true;
+  } catch (err) {
+    logger.warn(`⚠️ No se pudo conectar a Redis: ${err.message} - funcionando sin cache`);
+    redisClient = null;
+    redisPub = null;
+    redisSub = null;
+    redisAvailable = false;
+    return false;
+  }
+}
+
+// Inicializar Redis en background (no bloquea el servidor)
+if (isRedisConfigured) {
+  initRedis().catch(() => {});
+} else {
+  logger.warn("⚠️ Redis deshabilitado - no hay REDIS_HOST configurado");
+}
 
 /**
  * Cache helpers
@@ -63,6 +116,7 @@ const cache = {
    * Obtener valor del cache
    */
   async get(key) {
+    if (!redisAvailable || !redisClient) return null;
     try {
       const value = await redisClient.get(key);
       return value ? JSON.parse(value) : null;
@@ -76,6 +130,7 @@ const cache = {
    * Establecer valor en cache con TTL opcional
    */
   async set(key, value, ttlSeconds = 3600) {
+    if (!redisAvailable || !redisClient) return false;
     try {
       const serialized = JSON.stringify(value);
       if (ttlSeconds) {
@@ -94,6 +149,7 @@ const cache = {
    * Eliminar clave del cache
    */
   async del(key) {
+    if (!redisAvailable || !redisClient) return false;
     try {
       await redisClient.del(key);
       return true;
@@ -107,6 +163,7 @@ const cache = {
    * Eliminar múltiples claves por patrón
    */
   async delPattern(pattern) {
+    if (!redisAvailable || !redisClient) return 0;
     try {
       const keys = await redisClient.keys(pattern);
       if (keys.length > 0) {
@@ -123,6 +180,7 @@ const cache = {
    * Verificar si existe una clave
    */
   async exists(key) {
+    if (!redisAvailable || !redisClient) return false;
     try {
       const result = await redisClient.exists(key);
       return result === 1;
@@ -136,6 +194,7 @@ const cache = {
    * Incrementar contador
    */
   async incr(key, amount = 1) {
+    if (!redisAvailable || !redisClient) return null;
     try {
       return await redisClient.incrby(key, amount);
     } catch (err) {
@@ -238,6 +297,10 @@ const rateLimiter = {
    * Verificar y actualizar límite de rate
    */
   async checkLimit(key, maxRequests, windowSeconds) {
+    // Si Redis no está disponible, permitir (fail open)
+    if (!redisAvailable || !redisClient) {
+      return { allowed: true, current: 0, remaining: maxRequests };
+    }
     try {
       const current = await redisClient.incr(key);
 
@@ -262,10 +325,11 @@ const rateLimiter = {
  * Cerrar conexiones
  */
 async function closeConnections() {
+  if (!redisAvailable) return;
   logger.info("Cerrando conexiones Redis...");
-  await redisClient.quit();
-  await redisPub.quit();
-  await redisSub.quit();
+  if (redisClient) await redisClient.quit();
+  if (redisPub) await redisPub.quit();
+  if (redisSub) await redisSub.quit();
   logger.info("Conexiones Redis cerradas");
 }
 
@@ -273,10 +337,23 @@ async function closeConnections() {
 process.on("SIGTERM", closeConnections);
 process.on("SIGINT", closeConnections);
 
+/**
+ * Getters para clientes Redis (pueden ser null)
+ */
+const getRedisClient = () => redisClient;
+const getRedisPub = () => redisPub;
+const getRedisSub = () => redisSub;
+const isRedisAvailable = () => redisAvailable;
+
 module.exports = {
   redisClient,
   redisPub,
   redisSub,
+  getRedisClient,
+  getRedisPub,
+  getRedisSub,
+  isRedisAvailable,
+  initRedis,
   cache,
   battleCache,
   userCache,

@@ -100,7 +100,7 @@ async function register({ username, email, password, displayName = null }) {
     displayName: displayName || username,
     email,
     passwordHash,
-    role: "user",
+    role: "basic", // Roles válidos: 'basic', 'pro', 'admin'
   });
 
   logger.auth(newUser.id, "user_registered", {

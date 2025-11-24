@@ -1,0 +1,27 @@
+{
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "restartPolicyType": "ON_FAILURE",
+    "numReplicas": 1
+  },
+  "nixpacks": {
+    "phases": {
+      "setup": {
+        "commands": []
+      },
+      "install": {
+        "commands": [
+          "cd backend && npm install"
+        ]
+      },
+      "build": {
+        "commands": []
+      },
+      "start": {
+        "cmd": "cd backend && npm start"
+      }
+    }
+  }
+}

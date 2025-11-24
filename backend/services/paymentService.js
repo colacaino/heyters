@@ -257,6 +257,103 @@ async function getUserSubscription(userId) {
   return subscription;
 }
 
+/* ===========================================================
+   ADMIN: OBTENER TODAS LAS SUSCRIPCIONES
+=========================================================== */
+
+async function adminGetAllSubscriptions() {
+  const query = `
+    SELECT
+      s.*,
+      u.username,
+      u.email,
+      u.display_name,
+      u.is_pro,
+      p.name as plan_name,
+      p.price_cents,
+      EXTRACT(EPOCH FROM (s.current_period_end - NOW())) / 86400 as days_remaining
+    FROM subscriptions s
+    JOIN users u ON s.user_id = u.id
+    JOIN plans p ON s.plan_id = p.id
+    ORDER BY s.created_at DESC;
+  `;
+
+  const { rows } = await db.query(query);
+  return rows;
+}
+
+/* ===========================================================
+   ADMIN: OBTENER TODOS LOS PAGOS
+=========================================================== */
+
+async function adminGetAllPayments() {
+  const query = `
+    SELECT
+      p.*,
+      u.username,
+      u.email,
+      u.display_name
+    FROM payments p
+    JOIN users u ON p.user_id = u.id
+    ORDER BY p.created_at DESC
+    LIMIT 100;
+  `;
+
+  const { rows } = await db.query(query);
+  return rows;
+}
+
+/* ===========================================================
+   ADMIN: ESTADÍSTICAS DE PAGOS
+=========================================================== */
+
+async function adminGetPaymentStats() {
+  // Total de ingresos
+  const revenueQuery = `
+    SELECT
+      COUNT(*) as total_payments,
+      SUM(amount_cents) as total_revenue_cents,
+      COUNT(DISTINCT user_id) as unique_paying_users
+    FROM payments
+    WHERE status = 'succeeded';
+  `;
+
+  // Suscripciones activas
+  const activeSubsQuery = `
+    SELECT COUNT(*) as active_subscriptions
+    FROM subscriptions
+    WHERE status = 'active'
+      AND current_period_end > NOW();
+  `;
+
+  // Ingresos por mes
+  const monthlyQuery = `
+    SELECT
+      TO_CHAR(created_at, 'YYYY-MM') as month,
+      COUNT(*) as payments,
+      SUM(amount_cents) as revenue_cents
+    FROM payments
+    WHERE status = 'succeeded'
+      AND created_at >= NOW() - INTERVAL '12 months'
+    GROUP BY month
+    ORDER BY month DESC;
+  `;
+
+  const [revenue, activeSubs, monthly] = await Promise.all([
+    db.query(revenueQuery),
+    db.query(activeSubsQuery),
+    db.query(monthlyQuery),
+  ]);
+
+  return {
+    totalPayments: parseInt(revenue.rows[0].total_payments) || 0,
+    totalRevenueCents: parseInt(revenue.rows[0].total_revenue_cents) || 0,
+    uniquePayingUsers: parseInt(revenue.rows[0].unique_paying_users) || 0,
+    activeSubscriptions: parseInt(activeSubs.rows[0].active_subscriptions) || 0,
+    monthlyRevenue: monthly.rows,
+  };
+}
+
 module.exports = {
   createPlanService,
   listPlansService,
@@ -265,4 +362,7 @@ module.exports = {
   verifyPaymentStatus,
   cancelSubscription,
   getUserSubscription,
+  adminGetAllSubscriptions,
+  adminGetAllPayments,
+  adminGetPaymentStats,
 };

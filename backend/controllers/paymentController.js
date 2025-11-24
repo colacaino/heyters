@@ -105,3 +105,39 @@ exports.cancelSubscription = async (req, res) => {
     return send(res, 400, false, err.message);
   }
 };
+
+/* ===========================================================
+   ADMIN: VER TODAS LAS SUSCRIPCIONES
+=========================================================== */
+exports.adminListSubscriptions = async (req, res) => {
+  try {
+    const subscriptions = await paymentService.adminGetAllSubscriptions();
+    return send(res, 200, true, "Suscripciones obtenidas", { subscriptions });
+  } catch (err) {
+    return send(res, 500, false, err.message);
+  }
+};
+
+/* ===========================================================
+   ADMIN: VER TODOS LOS PAGOS
+=========================================================== */
+exports.adminListPayments = async (req, res) => {
+  try {
+    const payments = await paymentService.adminGetAllPayments();
+    return send(res, 200, true, "Pagos obtenidos", { payments });
+  } catch (err) {
+    return send(res, 500, false, err.message);
+  }
+};
+
+/* ===========================================================
+   ADMIN: ESTADÍSTICAS DE PAGOS
+=========================================================== */
+exports.adminGetStats = async (req, res) => {
+  try {
+    const stats = await paymentService.adminGetPaymentStats();
+    return send(res, 200, true, "Estadísticas obtenidas", stats);
+  } catch (err) {
+    return send(res, 500, false, err.message);
+  }
+};

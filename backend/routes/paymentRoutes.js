@@ -58,4 +58,32 @@ router.get("/verify/:paymentId", authMiddleware, paymentController.verifyPayment
 // Cancelar suscripción
 router.post("/cancel", authMiddleware, paymentController.cancelSubscription);
 
+// ===================================================================
+// ADMIN: GESTIÓN DE PAGOS Y SUSCRIPCIONES
+// ===================================================================
+
+// Ver todas las suscripciones (solo admin)
+router.get(
+  "/admin/subscriptions",
+  authMiddleware,
+  requireRole("admin"),
+  paymentController.adminListSubscriptions
+);
+
+// Ver todos los pagos (solo admin)
+router.get(
+  "/admin/payments",
+  authMiddleware,
+  requireRole("admin"),
+  paymentController.adminListPayments
+);
+
+// Ver estadísticas de pagos (solo admin)
+router.get(
+  "/admin/stats",
+  authMiddleware,
+  requireRole("admin"),
+  paymentController.adminGetStats
+);
+
 module.exports = router;

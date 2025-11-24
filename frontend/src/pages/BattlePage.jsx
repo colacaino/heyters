@@ -354,6 +354,8 @@ export default function BattlePage() {
       if (beatUrl) {
         setCurrentBeat(beatUrl);
         setSelectedBeat(beatUrl);
+        currentBeatRef.current = beatUrl;
+        pendingBeatAutoplay.current = true; // Autoplay cuando se selecciona beat
         pushFeedEntry(`Beat sincronizado para el round ${roundNumber || ""}`);
       }
     };

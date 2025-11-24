@@ -20,6 +20,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminPayments from "./pages/admin/AdminPayments";
 import AdminEventRequests from "./pages/admin/AdminEventRequests";
 import EventsPage from "./pages/Events";
 
@@ -73,6 +74,7 @@ function App() {
         {/* Admin routes */}
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/payments" element={<AdminPayments />} />
         <Route path="/admin/event-requests" element={<AdminEventRequests />} />
 
         {/* 404 - Debe ir al final */}

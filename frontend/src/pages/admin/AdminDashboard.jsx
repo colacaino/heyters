@@ -66,6 +66,9 @@ export default function AdminDashboard() {
             <Link to="/admin/users">
               <Button variant="primary">👥 Gestionar Usuarios</Button>
             </Link>
+            <Link to="/admin/payments">
+              <Button variant="primary">💰 Suscripciones</Button>
+            </Link>
             <Link to="/admin/event-requests">
               <Button variant="secondary">Eventos especiales</Button>
             </Link>

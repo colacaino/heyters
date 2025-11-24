@@ -173,11 +173,29 @@ export default function BattlePage() {
       // Esperar a que el audio esté listo antes de reproducir
       if (pendingBeatAutoplay.current) {
         const handleCanPlay = () => {
+          console.log("Audio listo, reproduciendo beat automáticamente");
           playBeat(true);
           pendingBeatAutoplay.current = false;
-          audio.removeEventListener("canplaythrough", handleCanPlay);
+          audio.removeEventListener("loadeddata", handleCanPlay);
         };
-        audio.addEventListener("canplaythrough", handleCanPlay);
+
+        // Usar loadeddata en lugar de canplaythrough (más confiable)
+        audio.addEventListener("loadeddata", handleCanPlay);
+
+        // Fallback: intentar reproducir después de 500ms si el evento no dispara
+        const fallbackTimeout = setTimeout(() => {
+          if (pendingBeatAutoplay.current) {
+            console.log("Fallback: reproduciendo beat sin esperar evento");
+            playBeat(true);
+            pendingBeatAutoplay.current = false;
+            audio.removeEventListener("loadeddata", handleCanPlay);
+          }
+        }, 500);
+
+        return () => {
+          clearTimeout(fallbackTimeout);
+          audio.removeEventListener("loadeddata", handleCanPlay);
+        };
       }
     } else {
       stopBeat();
@@ -482,6 +500,11 @@ export default function BattlePage() {
 
   const handleSelectBeat = async () => {
     try {
+      // Actualizar el beat localmente de inmediato para el moderador
+      setCurrentBeat(selectedBeat);
+      currentBeatRef.current = selectedBeat;
+      pendingBeatAutoplay.current = true;
+
       await axios.post(`/battles/${battleId}/select-beat`, {
         beatUrl: selectedBeat,
         roundNumber: battle?.currentRound || 1,
@@ -1057,19 +1080,19 @@ function ModeratorSlot({ trackRef, participant, isSelf }) {
     const trackKey =
       trackRef.publication?.trackSid || `${participantId}-${trackRef.source}`;
     return (
-      <div className="relative rounded-2xl border border-white/10 overflow-hidden min-h-[180px] bg-black/60">
+      <div className="relative rounded-2xl border border-white/10 overflow-hidden min-h-[120px] max-h-[140px] bg-black/60 max-w-md mx-auto">
         <ParticipantTile
           key={trackKey}
           trackRef={trackRef}
           displayName
           showMuteIndicator
         />
-        <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/70 text-xs font-semibold uppercase tracking-wide">
+        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 text-xs font-semibold uppercase tracking-wide">
           Moderador
         </div>
         {isSelf && (
-          <div className="absolute bottom-3 right-3 text-xs text-emerald-300 bg-black/60 px-2 py-1 rounded-full">
-            Eres tu
+          <div className="absolute bottom-2 right-2 text-xs text-emerald-300 bg-black/60 px-2 py-0.5 rounded-full">
+            Eres tú
           </div>
         )}
       </div>
@@ -1078,10 +1101,10 @@ function ModeratorSlot({ trackRef, participant, isSelf }) {
 
   const displayName = participant?.displayName || participant?.username || "Moderador";
   return (
-    <div className="rounded-2xl border border-dashed border-white/15 min-h-[160px] flex flex-col items-center justify-center text-center px-6 text-gray-400">
+    <div className="rounded-2xl border border-dashed border-white/15 min-h-[100px] max-w-md mx-auto flex flex-col items-center justify-center text-center px-6 text-gray-400">
       <p className="text-xs uppercase tracking-wide">Moderador</p>
       <p className="text-lg font-semibold text-white mt-2">{displayName}</p>
-      <p className="text-xs opacity-70 mt-1">Activa tu camara para aparecer junto a los MCs.</p>
+      <p className="text-xs opacity-70 mt-1">Activa tu cámara para aparecer junto a los MCs.</p>
     </div>
   );
 }

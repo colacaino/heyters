@@ -22,6 +22,7 @@ export default function PaymentPage() {
     {
       id: "basic",
       name: "Plan Básico",
+      code: null,
       price: 0,
       currency: "CLP",
       period: "mes",
@@ -39,8 +40,30 @@ export default function PaymentPage() {
       current: !isPro,
     },
     {
+      id: "pro-trial",
+      name: "Pro Trial",
+      code: "pro_trial_10d",
+      price: 2000,
+      currency: "CLP",
+      period: "10 días",
+      features: [
+        { text: "Todo lo del plan Pro", included: true },
+        { text: "⚡ Perfecto para probar", included: true },
+        { text: "Ver batallas en vivo completas", included: true },
+        { text: "Participar como MC", included: true },
+        { text: "Votar en batallas", included: true },
+        { text: "Chat en tiempo real", included: true },
+        { text: "Crear batallas propias", included: true },
+        { text: "✅ Pago único - No renovación", included: true },
+      ],
+      recommended: true,
+      current: false,
+      badge: "PRUEBA",
+    },
+    {
       id: "pro",
       name: "Plan Pro",
+      code: "pro_monthly",
       price: 5000,
       currency: "CLP",
       period: "mes",
@@ -54,7 +77,7 @@ export default function PaymentPage() {
         { text: "Estadísticas avanzadas", included: true },
         { text: "Badges y logros especiales", included: true },
       ],
-      recommended: true,
+      recommended: false,
       current: isPro,
     },
   ];
@@ -65,7 +88,12 @@ export default function PaymentPage() {
       return;
     }
 
-    if (isPro) {
+    if (!plan.code) {
+      toast.error("Plan inválido");
+      return;
+    }
+
+    if (isPro && plan.code !== "pro_trial_10d") {
       toast.success("Ya eres usuario Pro");
       return;
     }
@@ -79,7 +107,7 @@ export default function PaymentPage() {
 
       // Crear preferencia de pago en MercadoPago
       const response = await axios.post("/payments/checkout", {
-        planCode: "pro_monthly", // Código del plan en la BD
+        planCode: plan.code, // Usar el código del plan seleccionado
       });
 
       toast.dismiss("payment");

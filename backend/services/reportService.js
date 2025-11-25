@@ -1,6 +1,6 @@
 // services/reportService.js
 const PDFDocument = require("pdfkit");
-const db = require("../config/db");
+const db = require("../db");
 
 /**
  * Genera un informe de gestión completo en PDF
@@ -297,21 +297,23 @@ async function generateManagementReport() {
  * Obtiene todas las estadísticas necesarias para el informe
  */
 async function getReportStatistics() {
-  // Estadísticas de usuarios
-  const userStats = await db.query(`
-    SELECT
-      COUNT(*) as total_users,
-      COUNT(*) FILTER (WHERE is_pro = true) as pro_users,
-      COUNT(*) FILTER (WHERE is_pro = false) as basic_users,
-      COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as new_today,
-      COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as new_week,
-      COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as new_month
-    FROM users
-  `);
+  try {
+    // Estadísticas de usuarios
+    const userStats = await db.query(`
+      SELECT
+        COALESCE(COUNT(*), 0) as total_users,
+        COALESCE(COUNT(*) FILTER (WHERE is_pro = true), 0) as pro_users,
+        COALESCE(COUNT(*) FILTER (WHERE is_pro = false), 0) as basic_users,
+        COALESCE(COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE), 0) as new_today,
+        COALESCE(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0) as new_week,
+        COALESCE(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 0) as new_month
+      FROM users
+    `);
 
-  const users = userStats.rows[0];
-  const conversionRate =
-    users.total_users > 0 ? ((users.pro_users / users.total_users) * 100).toFixed(1) : 0;
+    const users = userStats.rows[0] || {};
+    const totalUsers = parseInt(users.total_users) || 0;
+    const proUsers = parseInt(users.pro_users) || 0;
+    const conversionRate = totalUsers > 0 ? ((proUsers / totalUsers) * 100).toFixed(1) : 0;
 
   // Estadísticas de batallas
   const battleStats = await db.query(`
@@ -381,13 +383,37 @@ async function getReportStatistics() {
     finishedBattles: parseInt(battles.finished_battles),
     battlesToday: parseInt(battles.battles_today),
     avgRounds: parseFloat(battles.avg_rounds) || 0,
-    totalPayments: parseInt(payments.total_payments),
-    totalRevenueCents: parseInt(payments.total_revenue_cents),
-    uniquePayingUsers: parseInt(payments.unique_paying_users),
-    activeSubscriptions: parseInt(subscriptions.active_subscriptions),
-    monthlyRevenue: monthlyRevenue.rows,
-    recentUsers: recentUsers.rows,
+    totalPayments: parseInt(payments.total_payments) || 0,
+    totalRevenueCents: parseInt(payments.total_revenue_cents) || 0,
+    uniquePayingUsers: parseInt(payments.unique_paying_users) || 0,
+    activeSubscriptions: parseInt(subscriptions.active_subscriptions) || 0,
+    monthlyRevenue: monthlyRevenue.rows || [],
+    recentUsers: recentUsers.rows || [],
   };
+  } catch (error) {
+    console.error("Error obteniendo estadísticas para reporte:", error);
+    // Devolver datos vacíos si hay error
+    return {
+      totalUsers: 0,
+      proUsers: 0,
+      basicUsers: 0,
+      newToday: 0,
+      newWeek: 0,
+      newMonth: 0,
+      conversionRate: 0,
+      totalBattles: 0,
+      activeBattles: 0,
+      finishedBattles: 0,
+      battlesToday: 0,
+      avgRounds: 0,
+      totalPayments: 0,
+      totalRevenueCents: 0,
+      uniquePayingUsers: 0,
+      activeSubscriptions: 0,
+      monthlyRevenue: [],
+      recentUsers: [],
+    };
+  }
 }
 
 /**

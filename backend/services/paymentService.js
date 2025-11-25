@@ -139,6 +139,10 @@ async function handleMPWebhook(body, query) {
         throw new Error("Metadata incompleto");
       }
 
+      // Obtener información del plan para verificar si es trial
+      const planResult = await db.query("SELECT code FROM plans WHERE id = $1", [planId]);
+      const planCode = planResult.rows[0]?.code;
+
       // Verificar si ya procesamos este pago (idempotencia)
       const existing = await db.query(
         "SELECT id FROM payments WHERE provider_payment_id = $1",
@@ -148,6 +152,12 @@ async function handleMPWebhook(body, query) {
       if (existing.rows.length > 0) {
         logger.info("Pago ya procesado, ignorando", { paymentId: payment.id });
         return { already_processed: true };
+      }
+
+      // Calcular duración de la suscripción según el plan
+      let subscriptionDays = 30; // Default: 30 días
+      if (planCode === "pro_trial_10d") {
+        subscriptionDays = 10; // Plan trial: 10 días
       }
 
       // TRANSACCIÓN: Pago y Suscripción deben ser atómicos
@@ -184,7 +194,7 @@ async function handleMPWebhook(body, query) {
             planId,
             "active",
             new Date(),
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 días
+            new Date(Date.now() + subscriptionDays * 24 * 60 * 60 * 1000), // Duración dinámica
             "mercadopago",
             String(payment.id),
           ]

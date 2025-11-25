@@ -1,0 +1,28 @@
+Fase,Tarea,Semana 1,Semana 2,Semana 3,Semana 4,Semana 5,Semana 6,Semana 7,Semana 8
+FASE 1: Diseño,Definición de requisitos funcionales,X,X,,,,,,
+FASE 1: Diseño,Diseño de arquitectura del sistema,X,X,,,,,,
+FASE 1: Diseño,Diseño de base de datos (PostgreSQL),X,X,,,,,,
+FASE 1: Diseño,Mockups de interfaz de usuario,X,X,,,,,,
+FASE 2: Backend,Configuración inicial (Node.js + Express),,X,X,,,,,
+FASE 2: Backend,Sistema de autenticación (JWT + bcrypt),,X,X,,,,,
+FASE 2: Backend,API REST (usuarios + batallas),,X,X,X,,,,
+FASE 2: Backend,Integración MercadoPago,,,,X,,,
+FASE 2: Backend,WebSockets con Socket.IO,,,X,X,,,,
+FASE 2: Backend,Integración LiveKit,,,X,X,,,,
+FASE 2: Backend,Seguridad (rate limiting + validaciones),,,,X,,,,
+FASE 3: Frontend,Configuración React + Vite,,,,,X,,,
+FASE 3: Frontend,Componentes UI reutilizables,,,,,X,X,,
+FASE 3: Frontend,Páginas principales (Home + Login + Registro),,,,,X,X,,
+FASE 3: Frontend,Página de batalla en vivo,,,,,X,X,,
+FASE 3: Frontend,Integración LiveKit (video/audio),,,,,X,X,,
+FASE 3: Frontend,Panel de administración,,,,,,X,,
+FASE 3: Frontend,Sistema de pagos y suscripciones,,,,,,X,,
+FASE 4: Testing y Deploy,Pruebas unitarias backend,,,,,,,X,
+FASE 4: Testing y Deploy,Pruebas de integración,,,,,,,X,
+FASE 4: Testing y Deploy,Deploy Railway (backend),,,,,,,X,
+FASE 4: Testing y Deploy,Deploy Vercel (frontend),,,,,,,X,
+FASE 4: Testing y Deploy,Configuración dominios y variables,,,,,,,X,
+FASE 5: Producción,Monitoreo y logs,,,,,,,,X
+FASE 5: Producción,Optimizaciones de rendimiento,,,,,,,,X
+FASE 5: Producción,Documentación técnica,,,,,,,,X
+FASE 5: Producción,Video demostración,,,,,,,,X

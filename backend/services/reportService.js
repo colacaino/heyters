@@ -364,8 +364,8 @@ async function getReportStatistics() {
     );
     const battlesToday = parseInt(battlesTodayResult.rows[0].count);
 
-    // Promedio de rounds
-    const avgRoundsResult = await db.query("SELECT ROUND(AVG(rounds), 1) as avg FROM battles");
+    // Promedio de rounds (usamos max_rounds ya que no hay columna "rounds" completados)
+    const avgRoundsResult = await db.query("SELECT ROUND(AVG(max_rounds), 1) as avg FROM battles WHERE status = 'finished'");
     const avgRounds = avgRoundsResult.rows[0] && avgRoundsResult.rows[0].avg
       ? parseFloat(avgRoundsResult.rows[0].avg)
       : 0;

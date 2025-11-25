@@ -22,9 +22,11 @@ const generalLimiter = rateLimit({
  * Rate limiter estricto para autenticación
  * Más permisivo en desarrollo
  */
+// TEMPORAL: Rate limiter DESACTIVADO para grabar video
+// REACTIVAR después de grabar cambiando a: max: 5
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // TEMPORAL: 100 intentos para testing/video (cambiar a 5 después)
+  max: 999999, // DESACTIVADO - Infinito para testing/video
   skipSuccessfulRequests: true,
   message: {
     success: false,

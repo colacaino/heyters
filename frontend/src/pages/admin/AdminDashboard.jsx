@@ -60,8 +60,21 @@ export default function AdminDashboard() {
       toast.success("Informe PDF descargado exitosamente");
     } catch (error) {
       toast.dismiss();
-      console.error("Error descargando PDF:", error);
-      toast.error("Error al generar el informe PDF");
+      console.error("❌ Error descargando PDF:", error);
+
+      // Mostrar información detallada del error
+      if (error.response) {
+        console.error("Status:", error.response.status);
+        console.error("Data:", error.response.data);
+        console.error("Headers:", error.response.headers);
+        toast.error(`Error ${error.response.status}: ${error.response.data?.message || 'Error al generar el PDF'}`);
+      } else if (error.request) {
+        console.error("No se recibió respuesta del servidor:", error.request);
+        toast.error("No se pudo conectar con el servidor");
+      } else {
+        console.error("Error al configurar la petición:", error.message);
+        toast.error(`Error: ${error.message}`);
+      }
     }
   };
 

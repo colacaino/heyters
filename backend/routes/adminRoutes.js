@@ -27,4 +27,7 @@ router.patch("/event-requests/:id", adminController.updateEventRequestAdmin);
 // Estadísticas
 router.get("/stats/growth", adminController.getGrowthStats);
 
+// Reportes
+router.get("/report/pdf", adminController.generateManagementReport);
+
 module.exports = router;

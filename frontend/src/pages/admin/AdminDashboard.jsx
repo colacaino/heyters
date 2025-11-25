@@ -39,6 +39,32 @@ export default function AdminDashboard() {
     }
   };
 
+  const downloadPDFReport = async () => {
+    try {
+      toast.loading("Generando informe PDF...");
+      const response = await axios.get("/admin/report/pdf", {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Heyters_Informe_${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.dismiss();
+      toast.success("Informe PDF descargado exitosamente");
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error descargando PDF:", error);
+      toast.error("Error al generar el informe PDF");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
@@ -216,7 +242,7 @@ export default function AdminDashboard() {
         {/* Acciones rápidas */}
         <Card className="p-6 mt-6">
           <h2 className="text-xl font-bold text-white mb-4">Acciones Rápidas</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <Link to="/admin/users">
               <Button variant="outline" fullWidth className="h-20 flex-col gap-2">
                 <span className="text-2xl">👥</span>
@@ -235,6 +261,15 @@ export default function AdminDashboard() {
                 <span>Ver Planes</span>
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              fullWidth
+              className="h-20 flex-col gap-2"
+              onClick={downloadPDFReport}
+            >
+              <span className="text-2xl">📄</span>
+              <span>Descargar Informe</span>
+            </Button>
             <Button
               variant="outline"
               fullWidth

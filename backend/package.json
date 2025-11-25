@@ -36,6 +36,7 @@
     "livekit-server-sdk": "^2.14.1",
     "mercadopago": "^2.10.0",
     "morgan": "^1.10.0",
+    "pdfkit": "^0.15.0",
     "pg": "^8.11.5",
     "redis": "^5.9.0",
     "socket.io": "^4.7.5",

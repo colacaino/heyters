@@ -418,3 +418,30 @@ exports.getGrowthStats = async (req, res) => {
     return send(res, 500, false, "Error al obtener estadísticas");
   }
 };
+
+/**
+ * GET /api/admin/report/pdf
+ * Genera y descarga un informe de gestión en PDF
+ */
+exports.generateManagementReport = async (req, res) => {
+  try {
+    const reportService = require("../services/reportService");
+    const pdfBuffer = await reportService.generateManagementReport();
+
+    const filename = `Heyters_Informe_${new Date().toISOString().split("T")[0]}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+
+    logger.info("Informe PDF generado", {
+      adminId: req.userId,
+      filename,
+    });
+
+    return res.send(pdfBuffer);
+  } catch (error) {
+    logger.error("Error generando informe PDF:", error);
+    return send(res, 500, false, "Error al generar el informe PDF");
+  }
+};

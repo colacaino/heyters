@@ -8,6 +8,7 @@ const db = require("../db");
  */
 async function generateManagementReport() {
   // Obtener todas las estadísticas necesarias
+  // Usamos las mismas queries que el dashboard de admin que SÍ funcionan
   const stats = await getReportStatistics();
 
   return new Promise((resolve, reject) => {
@@ -295,101 +296,154 @@ async function generateManagementReport() {
 
 /**
  * Obtiene todas las estadísticas necesarias para el informe
+ * NOTA: Usamos las mismas queries simples que el dashboard de admin que SÍ funcionan
  */
 async function getReportStatistics() {
   try {
-    // Estadísticas de usuarios
-    const userStats = await db.query(`
-      SELECT
-        COALESCE(COUNT(*), 0) as total_users,
-        COALESCE(COUNT(*) FILTER (WHERE is_pro = true), 0) as pro_users,
-        COALESCE(COUNT(*) FILTER (WHERE is_pro = false), 0) as basic_users,
-        COALESCE(COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE), 0) as new_today,
-        COALESCE(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days'), 0) as new_week,
-        COALESCE(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 0) as new_month
-      FROM users
-    `);
+    // ============================================
+    // ESTADÍSTICAS DE USUARIOS (queries simples separadas)
+    // ============================================
 
-    const users = userStats.rows[0] || {};
-    const totalUsers = parseInt(users.total_users) || 0;
-    const proUsers = parseInt(users.pro_users) || 0;
+    // Total de usuarios
+    const totalUsersResult = await db.query("SELECT COUNT(*) as count FROM users");
+    const totalUsers = parseInt(totalUsersResult.rows[0].count);
+
+    // Usuarios Pro
+    const proUsersResult = await db.query(
+      "SELECT COUNT(*) as count FROM users WHERE is_pro = TRUE OR role = 'pro' OR role = 'admin'"
+    );
+    const proUsers = parseInt(proUsersResult.rows[0].count);
+
+    // Usuarios básicos
+    const basicUsers = totalUsers - proUsers;
+
+    // Usuarios nuevos hoy
+    const newTodayResult = await db.query(
+      "SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = CURRENT_DATE"
+    );
+    const newToday = parseInt(newTodayResult.rows[0].count);
+
+    // Usuarios nuevos esta semana
+    const newWeekResult = await db.query(
+      "SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '7 days'"
+    );
+    const newWeek = parseInt(newWeekResult.rows[0].count);
+
+    // Usuarios nuevos este mes
+    const newMonthResult = await db.query(
+      "SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '30 days'"
+    );
+    const newMonth = parseInt(newMonthResult.rows[0].count);
+
+    // Tasa de conversión
     const conversionRate = totalUsers > 0 ? ((proUsers / totalUsers) * 100).toFixed(1) : 0;
 
-  // Estadísticas de batallas
-  const battleStats = await db.query(`
-    SELECT
-      COUNT(*) as total_battles,
-      COUNT(*) FILTER (WHERE status = 'live') as active_battles,
-      COUNT(*) FILTER (WHERE status = 'finished') as finished_battles,
-      COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as battles_today,
-      ROUND(AVG(rounds), 1) as avg_rounds
-    FROM battles
-  `);
+    // ============================================
+    // ESTADÍSTICAS DE BATALLAS (queries simples separadas)
+    // ============================================
 
-  const battles = battleStats.rows[0];
+    // Total de batallas
+    const totalBattlesResult = await db.query("SELECT COUNT(*) as count FROM battles");
+    const totalBattles = parseInt(totalBattlesResult.rows[0].count);
 
-  // Estadísticas de pagos
-  const paymentStats = await db.query(`
-    SELECT
-      COUNT(*) as total_payments,
-      COALESCE(SUM(amount_cents), 0) as total_revenue_cents,
-      COUNT(DISTINCT user_id) as unique_paying_users
-    FROM payments
-    WHERE status = 'succeeded'
-  `);
+    // Batallas activas
+    const activeBattlesResult = await db.query(
+      "SELECT COUNT(*) as count FROM battles WHERE status = 'live'"
+    );
+    const activeBattles = parseInt(activeBattlesResult.rows[0].count);
 
-  const payments = paymentStats.rows[0];
+    // Batallas finalizadas
+    const finishedBattlesResult = await db.query(
+      "SELECT COUNT(*) as count FROM battles WHERE status = 'finished'"
+    );
+    const finishedBattles = parseInt(finishedBattlesResult.rows[0].count);
 
-  // Suscripciones activas
-  const subscriptionStats = await db.query(`
-    SELECT COUNT(*) as active_subscriptions
-    FROM subscriptions
-    WHERE status = 'active' AND current_period_end > NOW()
-  `);
+    // Batallas hoy
+    const battlesTodayResult = await db.query(
+      "SELECT COUNT(*) as count FROM battles WHERE DATE(created_at) = CURRENT_DATE"
+    );
+    const battlesToday = parseInt(battlesTodayResult.rows[0].count);
 
-  const subscriptions = subscriptionStats.rows[0];
+    // Promedio de rounds
+    const avgRoundsResult = await db.query("SELECT ROUND(AVG(rounds), 1) as avg FROM battles");
+    const avgRounds = parseFloat(avgRoundsResult.rows[0].avg) || 0;
 
-  // Ingresos mensuales
-  const monthlyRevenue = await db.query(`
-    SELECT
-      TO_CHAR(created_at, 'YYYY-MM') as month,
-      COUNT(*) as payments,
-      COALESCE(SUM(amount_cents), 0) as revenue_cents
-    FROM payments
-    WHERE status = 'succeeded'
-    GROUP BY TO_CHAR(created_at, 'YYYY-MM')
-    ORDER BY month DESC
-    LIMIT 12
-  `);
+    // ============================================
+    // ESTADÍSTICAS DE PAGOS (queries simples separadas)
+    // ============================================
 
-  // Usuarios recientes
-  const recentUsers = await db.query(`
-    SELECT id, username, display_name, email, is_pro, created_at
-    FROM users
-    ORDER BY created_at DESC
-    LIMIT 10
-  `);
+    // Total de pagos exitosos
+    const totalPaymentsResult = await db.query(
+      "SELECT COUNT(*) as count FROM payments WHERE status = 'succeeded'"
+    );
+    const totalPayments = parseInt(totalPaymentsResult.rows[0].count) || 0;
 
-  return {
-    totalUsers: parseInt(users.total_users),
-    proUsers: parseInt(users.pro_users),
-    basicUsers: parseInt(users.basic_users),
-    newToday: parseInt(users.new_today),
-    newWeek: parseInt(users.new_week),
-    newMonth: parseInt(users.new_month),
-    conversionRate: parseFloat(conversionRate),
-    totalBattles: parseInt(battles.total_battles),
-    activeBattles: parseInt(battles.active_battles),
-    finishedBattles: parseInt(battles.finished_battles),
-    battlesToday: parseInt(battles.battles_today),
-    avgRounds: parseFloat(battles.avg_rounds) || 0,
-    totalPayments: parseInt(payments.total_payments) || 0,
-    totalRevenueCents: parseInt(payments.total_revenue_cents) || 0,
-    uniquePayingUsers: parseInt(payments.unique_paying_users) || 0,
-    activeSubscriptions: parseInt(subscriptions.active_subscriptions) || 0,
-    monthlyRevenue: monthlyRevenue.rows || [],
-    recentUsers: recentUsers.rows || [],
-  };
+    // Total de ingresos
+    const totalRevenueResult = await db.query(
+      "SELECT COALESCE(SUM(amount_cents), 0) as revenue FROM payments WHERE status = 'succeeded'"
+    );
+    const totalRevenueCents = parseInt(totalRevenueResult.rows[0].revenue) || 0;
+
+    // Usuarios pagantes únicos
+    const uniquePayingUsersResult = await db.query(
+      "SELECT COUNT(DISTINCT user_id) as count FROM payments WHERE status = 'succeeded'"
+    );
+    const uniquePayingUsers = parseInt(uniquePayingUsersResult.rows[0].count) || 0;
+
+    // Suscripciones activas
+    const activeSubscriptionsResult = await db.query(
+      "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active' AND current_period_end > NOW()"
+    );
+    const activeSubscriptions = parseInt(activeSubscriptionsResult.rows[0].count) || 0;
+
+    // ============================================
+    // INGRESOS MENSUALES
+    // ============================================
+    const monthlyRevenueResult = await db.query(`
+      SELECT
+        TO_CHAR(created_at, 'YYYY-MM') as month,
+        COUNT(*) as payments,
+        COALESCE(SUM(amount_cents), 0) as revenue_cents
+      FROM payments
+      WHERE status = 'succeeded'
+      GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+      ORDER BY month DESC
+      LIMIT 12
+    `);
+
+    // ============================================
+    // USUARIOS RECIENTES
+    // ============================================
+    const recentUsersResult = await db.query(`
+      SELECT id, username, display_name, email, is_pro, created_at
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+
+    // ============================================
+    // RETORNAR TODAS LAS ESTADÍSTICAS
+    // ============================================
+    return {
+      totalUsers,
+      proUsers,
+      basicUsers,
+      newToday,
+      newWeek,
+      newMonth,
+      conversionRate: parseFloat(conversionRate),
+      totalBattles,
+      activeBattles,
+      finishedBattles,
+      battlesToday,
+      avgRounds,
+      totalPayments,
+      totalRevenueCents,
+      uniquePayingUsers,
+      activeSubscriptions,
+      monthlyRevenue: monthlyRevenueResult.rows || [],
+      recentUsers: recentUsersResult.rows || [],
+    };
   } catch (error) {
     console.error("❌ Error obteniendo estadísticas para reporte:", error);
     console.error("Stack:", error.stack);

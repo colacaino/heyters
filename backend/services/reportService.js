@@ -391,28 +391,10 @@ async function getReportStatistics() {
     recentUsers: recentUsers.rows || [],
   };
   } catch (error) {
-    console.error("Error obteniendo estadísticas para reporte:", error);
-    // Devolver datos vacíos si hay error
-    return {
-      totalUsers: 0,
-      proUsers: 0,
-      basicUsers: 0,
-      newToday: 0,
-      newWeek: 0,
-      newMonth: 0,
-      conversionRate: 0,
-      totalBattles: 0,
-      activeBattles: 0,
-      finishedBattles: 0,
-      battlesToday: 0,
-      avgRounds: 0,
-      totalPayments: 0,
-      totalRevenueCents: 0,
-      uniquePayingUsers: 0,
-      activeSubscriptions: 0,
-      monthlyRevenue: [],
-      recentUsers: [],
-    };
+    console.error("❌ Error obteniendo estadísticas para reporte:", error);
+    console.error("Stack:", error.stack);
+    // Lanzar el error en lugar de devolver datos vacíos para debuggear
+    throw error;
   }
 }
 

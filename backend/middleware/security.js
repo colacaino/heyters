@@ -24,7 +24,7 @@ const generalLimiter = rateLimit({
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === "production" ? 5 : 100, // 100 en dev, 5 en prod
+  max: 100, // TEMPORAL: 100 intentos para testing/video (cambiar a 5 después)
   skipSuccessfulRequests: true,
   message: {
     success: false,

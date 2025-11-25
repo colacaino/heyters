@@ -366,50 +366,72 @@ async function getReportStatistics() {
 
     // Promedio de rounds
     const avgRoundsResult = await db.query("SELECT ROUND(AVG(rounds), 1) as avg FROM battles");
-    const avgRounds = parseFloat(avgRoundsResult.rows[0].avg) || 0;
+    const avgRounds = avgRoundsResult.rows[0] && avgRoundsResult.rows[0].avg
+      ? parseFloat(avgRoundsResult.rows[0].avg)
+      : 0;
 
     // ============================================
     // ESTADÍSTICAS DE PAGOS (queries simples separadas)
     // ============================================
 
-    // Total de pagos exitosos
-    const totalPaymentsResult = await db.query(
-      "SELECT COUNT(*) as count FROM payments WHERE status = 'succeeded'"
-    );
-    const totalPayments = parseInt(totalPaymentsResult.rows[0].count) || 0;
+    let totalPayments = 0;
+    let totalRevenueCents = 0;
+    let uniquePayingUsers = 0;
+    let activeSubscriptions = 0;
+    let monthlyRevenue = [];
 
-    // Total de ingresos
-    const totalRevenueResult = await db.query(
-      "SELECT COALESCE(SUM(amount_cents), 0) as revenue FROM payments WHERE status = 'succeeded'"
-    );
-    const totalRevenueCents = parseInt(totalRevenueResult.rows[0].revenue) || 0;
+    try {
+      // Total de pagos exitosos
+      const totalPaymentsResult = await db.query(
+        "SELECT COUNT(*) as count FROM payments WHERE status = 'succeeded'"
+      );
+      totalPayments = parseInt(totalPaymentsResult.rows[0].count) || 0;
 
-    // Usuarios pagantes únicos
-    const uniquePayingUsersResult = await db.query(
-      "SELECT COUNT(DISTINCT user_id) as count FROM payments WHERE status = 'succeeded'"
-    );
-    const uniquePayingUsers = parseInt(uniquePayingUsersResult.rows[0].count) || 0;
+      // Total de ingresos
+      const totalRevenueResult = await db.query(
+        "SELECT COALESCE(SUM(amount_cents), 0) as revenue FROM payments WHERE status = 'succeeded'"
+      );
+      totalRevenueCents = parseInt(totalRevenueResult.rows[0].revenue) || 0;
 
-    // Suscripciones activas
-    const activeSubscriptionsResult = await db.query(
-      "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active' AND current_period_end > NOW()"
-    );
-    const activeSubscriptions = parseInt(activeSubscriptionsResult.rows[0].count) || 0;
+      // Usuarios pagantes únicos
+      const uniquePayingUsersResult = await db.query(
+        "SELECT COUNT(DISTINCT user_id) as count FROM payments WHERE status = 'succeeded'"
+      );
+      uniquePayingUsers = parseInt(uniquePayingUsersResult.rows[0].count) || 0;
+    } catch (paymentError) {
+      console.warn("⚠️  No se pudieron obtener estadísticas de pagos (tabla payments podría no existir):", paymentError.message);
+    }
+
+    try {
+      // Suscripciones activas
+      const activeSubscriptionsResult = await db.query(
+        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active' AND current_period_end > NOW()"
+      );
+      activeSubscriptions = parseInt(activeSubscriptionsResult.rows[0].count) || 0;
+    } catch (subscriptionError) {
+      console.warn("⚠️  No se pudieron obtener estadísticas de suscripciones (tabla subscriptions podría no existir):", subscriptionError.message);
+    }
 
     // ============================================
     // INGRESOS MENSUALES
     // ============================================
-    const monthlyRevenueResult = await db.query(`
-      SELECT
-        TO_CHAR(created_at, 'YYYY-MM') as month,
-        COUNT(*) as payments,
-        COALESCE(SUM(amount_cents), 0) as revenue_cents
-      FROM payments
-      WHERE status = 'succeeded'
-      GROUP BY TO_CHAR(created_at, 'YYYY-MM')
-      ORDER BY month DESC
-      LIMIT 12
-    `);
+    try {
+      const monthlyRevenueResult = await db.query(`
+        SELECT
+          TO_CHAR(created_at, 'YYYY-MM') as month,
+          COUNT(*) as payments,
+          COALESCE(SUM(amount_cents), 0) as revenue_cents
+        FROM payments
+        WHERE status = 'succeeded'
+        GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+        ORDER BY month DESC
+        LIMIT 12
+      `);
+      monthlyRevenue = monthlyRevenueResult.rows || [];
+    } catch (monthlyError) {
+      console.warn("⚠️  No se pudieron obtener ingresos mensuales:", monthlyError.message);
+      monthlyRevenue = [];
+    }
 
     // ============================================
     // USUARIOS RECIENTES
@@ -441,7 +463,7 @@ async function getReportStatistics() {
       totalRevenueCents,
       uniquePayingUsers,
       activeSubscriptions,
-      monthlyRevenue: monthlyRevenueResult.rows || [],
+      monthlyRevenue, // Ya está definido arriba con try-catch
       recentUsers: recentUsersResult.rows || [],
     };
   } catch (error) {

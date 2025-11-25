@@ -5,66 +5,27 @@ const mongoSanitize = require("express-mongo-sanitize");
 
 /**
  * Rate limiter general para todas las rutas
- * Más permisivo en desarrollo para facilitar testing
+ * DESACTIVADO PARA GRABAR VIDEO
  */
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === "production" ? 100 : 10000, // 10000 en dev, 100 en prod
-  message: {
-    success: false,
-    message: "Demasiadas solicitudes desde esta IP, por favor intenta más tarde.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const generalLimiter = (req, res, next) => next(); // BYPASS COMPLETO
 
 /**
  * Rate limiter estricto para autenticación
- * Más permisivo en desarrollo
+ * DESACTIVADO PARA GRABAR VIDEO
  */
-// TEMPORAL: Rate limiter DESACTIVADO para grabar video
-// REACTIVAR después de grabar cambiando a: max: 5
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 999999, // DESACTIVADO - Infinito para testing/video
-  skipSuccessfulRequests: true,
-  message: {
-    success: false,
-    message: "Demasiados intentos de autenticación. Intenta en 15 minutos.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const authLimiter = (req, res, next) => next(); // BYPASS COMPLETO
 
 /**
  * Rate limiter para creación de recursos
- * Más permisivo en desarrollo
+ * DESACTIVADO PARA GRABAR VIDEO
  */
-const createLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hora
-  max: process.env.NODE_ENV === "production" ? 20 : 1000, // 1000 en dev, 20 en prod
-  message: {
-    success: false,
-    message: "Has alcanzado el límite de creación. Intenta más tarde.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const createLimiter = (req, res, next) => next(); // BYPASS COMPLETO
 
 /**
  * Rate limiter para votación
- * Previene manipulación de votos
+ * DESACTIVADO PARA GRABAR VIDEO
  */
-const voteLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 10, // 10 votos por minuto
-  message: {
-    success: false,
-    message: "Estás votando demasiado rápido. Espera un momento.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const voteLimiter = (req, res, next) => next(); // BYPASS COMPLETO
 
 /**
  * Configuración CORS segura

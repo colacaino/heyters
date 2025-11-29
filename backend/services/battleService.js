@@ -547,6 +547,21 @@ async function controlParticipantMedia(battleId, controllerUserId, { targetUserI
 }
 
 /**
+ * OBTENER BATALLA POR ID
+ * Obtiene información básica de una batalla
+ * @param {number} battleId - ID de la batalla
+ * @returns {Promise<Object|null>} Información de la batalla
+ */
+async function getBattleById(battleId) {
+  const result = await db.query(
+    "SELECT id, title, created_by, status FROM battles WHERE id = $1",
+    [battleId]
+  );
+
+  return result.rows[0] || null;
+}
+
+/**
  * ELIMINAR BATALLA
  * Elimina una batalla y todos sus datos relacionados (cascade)
  * @param {number} battleId - ID de la batalla
@@ -583,5 +598,6 @@ module.exports = {
   getBattleState,
   listLocalBeats,
   controlParticipantMedia,
+  getBattleById,
   deleteBattleService,
 };

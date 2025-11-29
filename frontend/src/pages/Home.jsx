@@ -216,6 +216,7 @@ export default function Home() {
 
   // Funciones para eliminar batalla
   const openDeleteModal = (battle) => {
+    console.log("🗑️ Abriendo modal de eliminación:", battle);
     setDeleteModal({ open: true, battle });
   };
 
@@ -243,7 +244,22 @@ export default function Home() {
   // Verificar si el usuario puede eliminar una batalla
   const canDeleteBattle = (battle) => {
     if (!user) return false;
-    return isAdmin || battle.created_by === user.id;
+
+    const isCreator = battle.created_by === user.id || battle.createdBy === user.id;
+    const canDelete = isAdmin || isCreator;
+
+    // Debug log
+    console.log("🔍 Verificando permisos para eliminar:", {
+      battleId: battle.id,
+      battleTitle: battle.title,
+      createdBy: battle.created_by || battle.createdBy,
+      userId: user.id,
+      isAdmin,
+      isCreator,
+      canDelete
+    });
+
+    return canDelete;
   };
 
   return (

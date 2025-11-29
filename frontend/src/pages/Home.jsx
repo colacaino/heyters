@@ -604,7 +604,7 @@ export default function Home() {
 
       {/* Modal de confirmación para eliminar batalla */}
       <Modal
-        open={deleteModal.open}
+        isOpen={deleteModal.open}
         onClose={closeDeleteModal}
         title="Eliminar Batalla"
         size="sm"

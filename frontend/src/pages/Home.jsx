@@ -23,6 +23,10 @@ export default function Home() {
     role: "viewer",
     password: "",
   });
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    battle: null,
+  });
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const isAdmin = Boolean(user?.isAdmin || user?.role === "admin");
@@ -208,6 +212,38 @@ export default function Home() {
       return <Badge variant="success" size="sm">Listo</Badge>;
     }
     return <Badge variant="warning" size="sm">Esperando</Badge>;
+  };
+
+  // Funciones para eliminar batalla
+  const openDeleteModal = (battle) => {
+    setDeleteModal({ open: true, battle });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, battle: null });
+  };
+
+  const confirmDeleteBattle = async () => {
+    if (!deleteModal.battle) return;
+
+    try {
+      toast.loading("Eliminando batalla...");
+      await axios.delete(`/battles/${deleteModal.battle.id}`);
+      toast.dismiss();
+      toast.success("Batalla eliminada exitosamente");
+      closeDeleteModal();
+      loadBattles(); // Recargar lista
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error eliminando batalla:", error);
+      toast.error(error.response?.data?.message || "Error al eliminar la batalla");
+    }
+  };
+
+  // Verificar si el usuario puede eliminar una batalla
+  const canDeleteBattle = (battle) => {
+    if (!user) return false;
+    return isAdmin || battle.created_by === user.id;
   };
 
   return (
@@ -412,13 +448,25 @@ export default function Home() {
                             </div>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/battle/${battle.id}`)}
-                        >
-                          Ver sala →
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/battle/${battle.id}`)}
+                          >
+                            Ver sala →
+                          </Button>
+                          {canDeleteBattle(battle) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteModal(battle)}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                            >
+                              🗑️
+                            </Button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Descripción */}
@@ -533,6 +581,37 @@ export default function Home() {
               isLoading={joining === `${passwordModal.battle?.id}-${passwordModal.role}`}
             >
               Unirme
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de confirmación para eliminar batalla */}
+      <Modal
+        open={deleteModal.open}
+        onClose={closeDeleteModal}
+        title="Eliminar Batalla"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-400">
+            ¿Estás seguro de que deseas eliminar la batalla{" "}
+            <span className="font-semibold text-white">{deleteModal.battle?.title}</span>?
+          </p>
+          <p className="text-xs text-red-400">
+            ⚠️ Esta acción no se puede deshacer. Se eliminarán todos los datos relacionados: participantes, rounds, votos y comentarios.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="ghost" size="sm" onClick={closeDeleteModal}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={confirmDeleteBattle}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
             </Button>
           </div>
         </div>

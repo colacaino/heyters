@@ -118,4 +118,11 @@ router.get(
 // Obtener detalles completos - con validación
 router.get("/:battleId", battleIdValidation, battleController.getBattleDetails);
 
+// Eliminar batalla - solo admin o creador
+router.delete(
+  "/:id",
+  authMiddleware,
+  battleController.deleteBattle
+);
+
 module.exports = router;

@@ -274,3 +274,43 @@ exports.listLocalBeats = async (_req, res) => {
     return send(res, 500, false, err.message);
   }
 };
+
+/* ===========================================================
+   ELIMINAR BATALLA
+   - Solo el creador de la batalla o un admin puede eliminarla
+   - Se elimina en cascada: participantes, rounds, votos, comentarios
+=========================================================== */
+exports.deleteBattle = async (req, res) => {
+  try {
+    const battleId = parseInt(req.params.id);
+    const userId = req.user.userId;
+    const userRole = req.user.role; // Asumiendo que el middleware auth agrega el role
+
+    if (!battleId || isNaN(battleId)) {
+      return send(res, 400, false, "ID de batalla inválido");
+    }
+
+    // Obtener información de la batalla
+    const battle = await battleService.getBattleById(battleId);
+
+    if (!battle) {
+      return send(res, 404, false, "Batalla no encontrada");
+    }
+
+    // Verificar permisos: admin O creador
+    const isAdmin = userRole === 'admin';
+    const isCreator = battle.created_by === userId;
+
+    if (!isAdmin && !isCreator) {
+      return send(res, 403, false, "No tienes permisos para eliminar esta batalla");
+    }
+
+    // Eliminar batalla (en cascada)
+    await battleService.deleteBattleService(battleId);
+
+    return send(res, 200, true, "Batalla eliminada exitosamente");
+  } catch (err) {
+    console.error("Error eliminando batalla:", err);
+    return send(res, 500, false, err.message);
+  }
+};

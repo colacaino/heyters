@@ -546,6 +546,25 @@ async function controlParticipantMedia(battleId, controllerUserId, { targetUserI
   });
 }
 
+/**
+ * ELIMINAR BATALLA
+ * Elimina una batalla y todos sus datos relacionados (cascade)
+ * @param {number} battleId - ID de la batalla
+ * @returns {Promise<void>}
+ */
+async function deleteBattleService(battleId) {
+  const result = await db.query(
+    "DELETE FROM battles WHERE id = $1 RETURNING id",
+    [battleId]
+  );
+
+  if (result.rowCount === 0) {
+    throw new Error("Batalla no encontrada");
+  }
+
+  logger.info("Batalla eliminada", { battleId });
+}
+
 module.exports = {
   createBattleService,
   listBattles: listBattlesService,
@@ -564,4 +583,5 @@ module.exports = {
   getBattleState,
   listLocalBeats,
   controlParticipantMedia,
+  deleteBattleService,
 };

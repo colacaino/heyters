@@ -54,8 +54,13 @@ export default function Register() {
       });
 
       if (response.data.success) {
-        toast.success("¡Registro exitoso! Ya puedes iniciar sesión 🎉");
-        navigate("/login");
+        toast.success("¡Cuenta creada! Revisa tu email para verificar tu cuenta.");
+        navigate("/verification-pending", {
+          state: {
+            email: formData.email,
+            username: formData.username,
+          },
+        });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Error al registrarse");

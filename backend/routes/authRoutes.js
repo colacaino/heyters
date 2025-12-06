@@ -32,4 +32,16 @@ router.post("/logout-all", authMiddleware, authController.logoutAll);
 // Usuario actual - requiere autenticación
 router.get("/me", authMiddleware, authController.getMe);
 
+// Verificación de email
+router.post(
+  "/resend-verification",
+  authMiddleware,
+  authController.resendVerificationEmail
+);
+router.get("/verify-email/:token", authController.verifyEmail);
+
+// Recuperación de contraseña
+router.post("/forgot-password", authLimiter, authController.forgotPassword);
+router.post("/reset-password/:token", authLimiter, authController.resetPassword);
+
 module.exports = router;

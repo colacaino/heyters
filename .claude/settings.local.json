@@ -7,7 +7,9 @@
       "Bash(find:*)",
       "Bash(cat:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Mejor manejo de errores en PDF report - tablas payments/subscriptions opcionales\n\n- Agregado try-catch para queries de pagos y suscripciones\n- Si esas tablas no existen, el PDF igual se genera con esos valores en 0\n- Fix validación de avgRounds cuando battles está vacío\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Mejor manejo de errores en PDF report - tablas payments/subscriptions opcionales\n\n- Agregado try-catch para queries de pagos y suscripciones\n- Si esas tablas no existen, el PDF igual se genera con esos valores en 0\n- Fix validación de avgRounds cuando battles está vacío\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

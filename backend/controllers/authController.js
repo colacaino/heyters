@@ -2,6 +2,7 @@
 const authService = require("../services/authService");
 const { findUserById } = require("../models/userModel");
 const { logger } = require("../utils/logger");
+const emailService = require("../services/emailService");
 
 /* ===========================================================
    HELPER: RESPUESTAS UNIFICADAS
@@ -60,7 +61,14 @@ exports.register = async (req, res) => {
       city,
     });
 
-    return send(res, 201, true, "Usuario registrado exitosamente", {
+    // Enviar email de verificación (no bloqueante)
+    emailService
+      .sendVerificationEmail(user.id, user.email, user.username)
+      .catch((err) => {
+        logger.error("Error enviando email de verificación:", err);
+      });
+
+    return send(res, 201, true, "Usuario registrado exitosamente. Revisa tu email para verificar tu cuenta.", {
       user,
     });
   } catch (err) {
@@ -180,5 +188,101 @@ exports.getMe = async (req, res) => {
     return send(res, 200, true, "Usuario encontrado", { user });
   } catch (err) {
     return send(res, 500, false, err.message);
+  }
+};
+
+/* ===========================================================
+   REENVIAR EMAIL DE VERIFICACIÓN
+=========================================================== */
+exports.resendVerificationEmail = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const user = await findUserById(userId);
+
+    if (!user) {
+      return send(res, 404, false, "Usuario no encontrado");
+    }
+
+    if (user.isVerified) {
+      return send(res, 400, false, "Tu cuenta ya está verificada");
+    }
+
+    await emailService.sendVerificationEmail(user.id, user.email, user.username);
+
+    return send(res, 200, true, "Email de verificación enviado. Revisa tu bandeja de entrada.");
+  } catch (err) {
+    logger.error("Error reenviando email de verificación:", err);
+    return send(res, 500, false, "Error al enviar el email de verificación");
+  }
+};
+
+/* ===========================================================
+   VERIFICAR EMAIL
+=========================================================== */
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return send(res, 400, false, "Token de verificación requerido");
+    }
+
+    await emailService.verifyEmail(token);
+
+    return send(res, 200, true, "Email verificado exitosamente. Ya puedes usar todas las funciones de Heyters.");
+  } catch (err) {
+    logger.error("Error verificando email:", err);
+    return send(res, 400, false, err.message);
+  }
+};
+
+/* ===========================================================
+   SOLICITAR RECUPERACIÓN DE CONTRASEÑA
+=========================================================== */
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return send(res, 400, false, "Email requerido");
+    }
+
+    await emailService.sendPasswordResetEmail(email);
+
+    // Por seguridad, siempre retornamos el mismo mensaje
+    return send(
+      res,
+      200,
+      true,
+      "Si el email está registrado, recibirás un enlace de recuperación en tu bandeja de entrada."
+    );
+  } catch (err) {
+    logger.error("Error en forgot password:", err);
+    return send(res, 500, false, "Error al procesar la solicitud");
+  }
+};
+
+/* ===========================================================
+   RESTABLECER CONTRASEÑA
+=========================================================== */
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!token) {
+      return send(res, 400, false, "Token de recuperación requerido");
+    }
+
+    if (!password || password.length < 6) {
+      return send(res, 400, false, "La contraseña debe tener al menos 6 caracteres");
+    }
+
+    await emailService.resetPassword(token, password);
+
+    return send(res, 200, true, "Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.");
+  } catch (err) {
+    logger.error("Error reseteando contraseña:", err);
+    return send(res, 400, false, err.message);
   }
 };

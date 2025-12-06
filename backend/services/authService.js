@@ -144,6 +144,17 @@ async function login({ identifier, password, userAgent, ip }) {
     throw new Error("La cuenta está desactivada");
   }
 
+  // Verificar que el email esté verificado
+  if (!user.isVerified) {
+    logger.security("low", "Intento de login sin verificar email", {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      ip,
+    });
+    throw new Error("Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.");
+  }
+
   const accessToken = generateAccessToken(user);
   const refreshToken = await generateRefreshToken(user.id, userAgent, ip);
 

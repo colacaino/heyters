@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import axios from "../config/axios";
+import axios from "../api/axios";
 import toast from "react-hot-toast";
 
 export default function VerifyEmail() {
